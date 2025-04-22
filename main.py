@@ -30,13 +30,12 @@ if channel_access_token is None:
 configuration = Configuration(access_token=channel_access_token)
 client = genai.Client()
 parser = WebhookParser(channel_secret)
-line_bot_api = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async_api_client = AsyncApiClient(configuration)
-    line_bot_api = AsyncMessagingApi(async_api_client)
+    app.state.line_bot_api = AsyncMessagingApi(async_api_client)
     yield
 
 
@@ -66,6 +65,7 @@ async def test():
 
 @app.post("/broadcast")
 async def broadcast_message(request: Request):
+    line_bot_api = request.app.state.line_bot_api
     response = client.models.generate_content(
         model="gemini-2.0-flash",
         contents=[
@@ -98,7 +98,7 @@ async def handle_callback(request: Request):
         events = parser.parse(body, signature)
     except InvalidSignatureError:
         raise HTTPException(status_code=400, detail="Invalid signature")
-
+    line_bot_api = request.app.state.line_bot_api
     for event in events:
         if not isinstance(event, MessageEvent):
             continue
