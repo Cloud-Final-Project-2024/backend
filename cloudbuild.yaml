@@ -2,3 +2,6 @@ steps:
   - name: 'ubuntu'
     entrypoint: echo
     args: ['Hello, world!']
+options:
+  substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
