@@ -10,6 +10,7 @@ from linebot.v3.messaging import (
     Configuration,
     ReplyMessageRequest,
     TextMessage,
+    BroadcastRequest,
 )
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
@@ -55,6 +56,28 @@ async def test():
     return {"message": "Server is running"}
 
 
+@app.post("/broadcast")
+async def broadcast_message(request: Request):
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[
+            """
+        คุณคือ AI ให้กำลังใจช่วยเขียนข้อความให้กำลังใจที่ทำให้ผู้อ่านรู้สึกดีขึ้น
+        โดยที่คุณจะต้องให้คำตอบอย่างกระชับและไม่ต้องให้ข้อความอย่างอื่นที่ไม่เกี่ยวข้อง
+        คำตอบของคุณควรจะมีความหสร้างสรรค์แปลกใหม่
+        คำตอบ:
+        """
+        ],
+    )
+    await line_bot_api.broadcast(
+        BroadcastRequest(messages=[TextMessage(text=response.text)])
+    )
+    return {
+        "message": "Broadcast sent successfully",
+        "broadcasted_message": response.text,
+    }
+
+
 @app.post("/callback")
 async def handle_callback(request: Request):
     signature = request.headers["X-Line-Signature"]
@@ -73,7 +96,11 @@ async def handle_callback(request: Request):
             continue
         if not isinstance(event.message, TextMessageContent):
             continue
-        print("Message from {}: {}".format(event.source.user_id, event.message.text))
+        print(
+            "{} from {}: {}".format(
+                event.timestamp, event.source.user_id, event.message.text
+            )
+        )
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=[
