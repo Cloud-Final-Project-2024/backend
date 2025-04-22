@@ -14,6 +14,7 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from contextlib import asynccontextmanager
 
 load_dotenv()
 
@@ -27,12 +28,19 @@ if channel_access_token is None:
     sys.exit(1)
 
 configuration = Configuration(access_token=channel_access_token)
-
-app = FastAPI()
 client = genai.Client()
-async_api_client = AsyncApiClient(configuration)
-line_bot_api = AsyncMessagingApi(async_api_client)
 parser = WebhookParser(channel_secret)
+line_bot_api = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async_api_client = AsyncApiClient(configuration)
+    line_bot_api = AsyncMessagingApi(async_api_client)
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/motivation")
