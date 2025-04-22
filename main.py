@@ -34,7 +34,7 @@ line_bot_api = AsyncMessagingApi(async_api_client)
 parser = WebhookParser(channel_secret)
 
 
-@app.get("/")
+@app.get("/motivation")
 async def root():
     response = client.models.generate_content(
         model="gemini-2.0-flash",
@@ -47,13 +47,12 @@ async def root():
         """
         ],
     )
-    print(response.text)
     return {"message": response.text}
 
 
-@app.get("/test")
+@app.get("/")
 async def test():
-    return {"message": "test"}
+    return {"message": "Server is running"}
 
 
 @app.post("/callback")
@@ -75,10 +74,23 @@ async def handle_callback(request: Request):
         if not isinstance(event.message, TextMessageContent):
             continue
         print("Message from {}: {}".format(event.source.user_id, event.message.text))
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                """
+        คุณคือ AI ให้กำลังใจช่วยเขียนข้อความให้กำลังใจให้ผู้อ่านรู้สึกดีขึ้น
+        โดยผู้อ่านส่งมาว่า {} คุณจะต้องตอบกลับข้อความผู้อ่าน ตอบอย่างกระชับและไม่ต้องให้ข้อความอย่างอื่นที่ไม่เกี่ยวข้อง
+        คำตอบของคุณควรจะมีความหมายสร้างสรรค์แปลกใหม่
+        คำตอบ:
+        """.format(
+                    event.message.text[:200]
+                ),
+            ],
+        )
         await line_bot_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=event.message.text)],
+                messages=[TextMessage(text=response.text)],
             )
         )
 
